@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling } from '@microsoft/vscode-azext-utils';
 import { DockerUri } from './DockerUri';
 import { getDockerOSType } from '../../utils/osUtils';
-import { AccumulatorStream, CommandNotSupportedError, DisposableLike, ListFilesItem } from '@microsoft/container-runtimes';
+import { AccumulatorStream, CommandNotSupportedError, ListFilesItem } from '@microsoft/container-runtimes';
 import { localize } from '../../localize';
 import { ext } from '../../extensionVariables';
 import { tarPackStream, tarUnpackStream } from '../../utils/tarUtils';
@@ -22,7 +22,6 @@ class MethodNotImplementedError extends CommandNotSupportedError {
 
 export class ContainerFilesProvider extends vscode.Disposable implements vscode.FileSystemProvider {
     private readonly changeEmitter: vscode.EventEmitter<vscode.FileChangeEvent[]> = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
-    public readonly onDidChangeFile = this.changeEmitter.event;
 
     public constructor() {
         super(() => {
@@ -30,12 +29,20 @@ export class ContainerFilesProvider extends vscode.Disposable implements vscode.
         });
     }
 
-    public watch(uri: vscode.Uri, options: { recursive: boolean; excludes: string[]; }): vscode.Disposable {
-        // As we don't actually support watching files, just return a dummy subscription object...
-        return DisposableLike.None;
+    public get onDidChangeFile(): vscode.Event<vscode.FileChangeEvent[]> {
+        return this.changeEmitter.event;
     }
 
-    public stat(uri: vscode.Uri): Promise<vscode.FileStat> {
+    public watch(uri: vscode.Uri, options: { recursive: boolean; excludes: string[]; }): vscode.Disposable {
+        // As we don't actually support watching files, just return a dummy subscription object...
+        return {
+            dispose: () => {
+                // Noop
+            }
+        };
+    }
+
+    public stat(uri: vscode.Uri): vscode.FileStat | Thenable<vscode.FileStat> {
         const method = async (): Promise<vscode.FileStat> => {
             const dockerUri = DockerUri.parse(uri);
 
@@ -50,10 +57,10 @@ export class ContainerFilesProvider extends vscode.Disposable implements vscode.
         return method();
     }
 
-    public readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]> {
+    public readDirectory(uri: vscode.Uri): [string, vscode.FileType][] | Thenable<[string, vscode.FileType][]> {
         const method = async (): Promise<[string, vscode.FileType][]> => {
             const dockerUri = DockerUri.parse(uri);
-            const containerOS = dockerUri.options?.containerOS || await getDockerOSType();
+            const containerOS = dockerUri.options.containerOS || await getDockerOSType();
 
             const items: ListFilesItem[] = await ext.runWithDefaultShell(client =>
                 client.listFiles({
@@ -69,11 +76,11 @@ export class ContainerFilesProvider extends vscode.Disposable implements vscode.
         return method();
     }
 
-    public createDirectory(uri: vscode.Uri): void {
+    public createDirectory(uri: vscode.Uri): void | Thenable<void> {
         throw new MethodNotImplementedError();
     }
 
-    public readFile(uri: vscode.Uri): Promise<Uint8Array> {
+    public readFile(uri: vscode.Uri): Uint8Array | Thenable<Uint8Array> {
         const method =
             async (): Promise<Uint8Array> => {
                 const dockerUri = DockerUri.parse(uri);
@@ -99,7 +106,7 @@ export class ContainerFilesProvider extends vscode.Disposable implements vscode.
         return method();
     }
 
-    public writeFile(uri: vscode.Uri, content: Uint8Array, options: { create: boolean; overwrite: boolean; }): Promise<void> {
+    public writeFile(uri: vscode.Uri, content: Uint8Array, options: { create: boolean; overwrite: boolean; }): void | Thenable<void> {
         const method =
             async (): Promise<void> => {
                 const dockerUri = DockerUri.parse(uri);
@@ -131,15 +138,15 @@ export class ContainerFilesProvider extends vscode.Disposable implements vscode.
             });
     }
 
-    public delete(uri: vscode.Uri, options: { recursive: boolean; }): void {
+    public delete(uri: vscode.Uri, options: { recursive: boolean; }): void | Thenable<void> {
         throw new MethodNotImplementedError();
     }
 
-    public rename(oldUri: vscode.Uri, newUri: vscode.Uri, options: { overwrite: boolean; }): void {
+    public rename(oldUri: vscode.Uri, newUri: vscode.Uri, options: { overwrite: boolean; }): void | Thenable<void> {
         throw new MethodNotImplementedError();
     }
 
-    public copy?(source: vscode.Uri, destination: vscode.Uri, options: { overwrite: boolean; }): void {
+    public copy?(source: vscode.Uri, destination: vscode.Uri, options: { overwrite: boolean; }): void | Thenable<void> {
         throw new MethodNotImplementedError();
     }
 }
