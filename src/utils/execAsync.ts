@@ -42,7 +42,6 @@ export async function execAsync(command: string, options?: cp.ExecOptions & { st
 
     const spawnOptions: StreamSpawnOptions = {
         ...options,
-        shell: true,
         stdInPipe: stdinPipe,
         stdOutPipe: stdoutIntermediate ?? stdoutFinal,
         stdErrPipe: stderrIntermediate ?? stderrFinal,
