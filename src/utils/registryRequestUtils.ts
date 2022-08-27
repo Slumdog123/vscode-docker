@@ -35,8 +35,7 @@ export async function registryRequest<T>(node: IRegistryAuthTreeItem | IReposito
         await (<IRepositoryAuthTreeItem>node).parent.addAuth(options);
     }
 
-    const baseUrl = options.baseUrl || node.baseUrl || (<IRepositoryAuthTreeItem>node).parent.baseUrl;
-    options.baseUrl = undefined;
+    const baseUrl = node.baseUrl || (<IRepositoryAuthTreeItem>node).parent.baseUrl;
     let fullUrl: string = url;
     if (!url.startsWith(baseUrl)) {
         let parsed = new URL(url, baseUrl);
